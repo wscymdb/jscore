@@ -1,4 +1,4 @@
-# JavaScript高级
+# `JavaScript高级
 
 # 1.函数
 
@@ -95,13 +95,15 @@ console.log((obj2.foo = obj1.foo)); // foo函数
 
 ## 1.3.箭头函数
 
-* 箭头函数不会绑定this和arguments
+* 箭头函数``不会绑定this和arguments和super``
 
-* 箭头函数不能用作构造函数
+* 箭头函数``没有显式原型``
+
+* 箭头函数不能用作构造函数(因为没有显示原型)
 
 * 如果函数体只有一行代码，默认值返回的是一个对象，必须用括号将对象包裹
 
-  * ```java
+  * ```javascript
     // 如果不用括号包裹   （） => {}  这样js引擎解析不出来
     [1,2,3].map(item => ({a:1,b:2})) 
     ```
@@ -852,7 +854,7 @@ let obj = {
 console.log(obj) // {address: '河南'}
 ```
 
-## 6.5.结构（Destructuring）
+## 6.5.解构（Destructuring）
 
 ### 6.5.1.数组的解构
 
@@ -899,3 +901,1112 @@ let {name,...info} = obj
 //  name='zs'  info = {age:19, address:'河南'}
 ```
 
+## 6.6.let&const
+
+### 作用域提升
+
+* let和const声明的变量，没有作用域提升，但是在代码执行的时候还是会被先创建的，只不过只有到变量被赋值的时候才可以被访问
+
+### 暂时性死区
+
+``英文``：TDZ（temporal dead zone）社区给的定义，官方没有这个定义
+
+* 从块级作用域的顶部一直到变量声明完成之前，这个变量处在暂时性死区
+
+  * 在这个区域内，无法访问该变量
+
+* 暂时性死区和定义的位置没有关系，和代码的执行顺序有关系
+
+  * ```javascript
+    function foo() {
+        console.log(message)
+    }
+    let message = 'zs'
+    foo() // zs
+    ```
+
+* 暂时性死区形成后，再该区域内这这个标识符不能够被访问
+
+  * ```javascript
+    let message = 'zs'
+    function foo() {
+        console.log(message)
+        let message = 'aa'
+    }
+    foo()  // 报错
+    ```
+
+### 声明的变量不添加window上
+
+### 块级作用域
+
+* 在块级作用域内用``let或const``声明的变量外界无法访问
+
+* 但是在块级作用域内声明的函数在外界允许访问，但是只能``在声明之后``才能访问
+
+  * 因为块级作用域是es6之后才出来的，如果函数写在块级内，那么早期的代码如果在外部访问就会报错，项目中可能会用社区的库，有些库可能不维护了，所以浏览器对块级内声明的函数做了特殊的处理
+
+  ```javascript
+  foo() // 报错
+  {
+      let a = 123
+      function foo() {}
+  }
+  console.log(a) // 报错
+  foo()
+  ```
+
+
+## 6.6.模板字符串
+
+### 模板字符串
+
+```javascript
+b = 123
+a = `${b} + ddd`
+//a  123 + ddd
+```
+
+
+
+### 标签模板字符串
+
+react中会用，暂做了解
+
+```javascript
+
+// 
+      function foo(...arg) {
+        console.log(arg);
+      }
+
+      foo`hahha is ${123} dog ${222}
+      .banner {
+        color：red;
+      }
+      `;
+// 打印结果
+      // [
+      //   [
+      //     "hahha is ",
+      //     " dog ",
+      //     "\n      .banner {\n        color：red;\n      }\n      ",
+      //   ],
+      //   123,
+      //   222,
+      // ];
+```
+
+## 6.7.函数增强
+
+### 6.7.1.默认参数
+
+* 有默认参数的形参尽量写在后面
+
+* 有默认参数的形参，是不会计算在length之内的
+
+* 默认参数之后的所有参数都不参与计算在length之内
+
+  * ```javascript
+    function foo(age,name=123,height=2) {}
+    foo.length // 1
+    ```
+
+* 剩余参数也是放到最后面，但是要放到默认参数之前
+
+```javascript
+function foo(name='zs',age=18) {
+    console.log(name,age)
+}
+foo()  // zs,18
+```
+
+### 6.7.2.默认参数解构
+
+```javascript
+const obj = {name:'zs'}
+const {name = 'jack'}  = obj
+
+
+// 原始写法 
+// 当形参是一个对象的时候，设置默认值
+function foo(obj = {name:'zs'} ) {
+    console.log(obj.name)
+}
+// 优化
+function foo({name} = {name: 'zs'} ) {
+    console.log(name)
+}
+// 进一步优化
+function foo({name = 'zs'} = {} ) {
+    console.log(name)
+}
+foo()
+```
+
+## 6.8.展开语法（spread syntax）
+
+* 在``函数调用``时使用
+* 在``数组构造``时使用
+* 在``构建对象字面量``时，也可以使用展开运算符，ES9(ES2018)新添加的
+  * 必须是``对象字面量``的形式才可以使用
+
+```javascript
+// 基本使用
+let obj = {
+    name: 'zs'
+}
+let info = {...obj}
+
+let arr = [1,2,3]
+let arr1 = [...arr,9]  // [1,2,3,9]
+
+let hello = 'hello'
+let arr2 = [...hello]
+```
+
+## 6.9.Symbol
+
+* Symbol是ES6中新增的一个``基本数据类型``，翻译为``符号``。
+
+**Symbol出现的原因：**
+
+* 在ES6之前，对象的key只能是字符串，很容易造成``属性名的冲突``
+
+* 比如传入一个函数的参数是一个对象，函数体中对对象添加一个属性，那么如果传入的对象中已经有函数代码块中同名的key那么就会进行覆盖
+
+  * ```javascript
+    function foo(obj) {
+        obj.name = 'zs'
+    }
+    foo({name:'jack'})
+    ```
+
+* Symbol就是为了解决这一问题的，用来``生成一个独一无二的值``
+
+  * Symbol值是通过Symbol函数来生成的，生成后可以作为属性名
+
+* ```javascript
+  const s1 = Symbol()
+  const obj = {
+      [s1]: 'li'
+  }
+  obj[Symbol()] = 'sss'
+  ```
+
+* Symbol即使创建多次，他们也是不同的
+
+  * Symbol函数执行后每次创建出来的值都是独一无二的
+
+* 也可以在创建Symbol值的时候传入一个描述description（ES2019新增的特性）
+
+  * ```javascript
+     const s1 = Symbol('我是描述哈哈')
+    ```
+
+**获取用Symbol属性名的值**
+
+* 不能使用Object.keys()获取key是symbol的键名
+* 要通过``Object.getOwnPropertySymbol()``获取
+
+```javascript
+const s1 = Symbol()
+const obj = {
+    [s1]: 'hhh'
+}
+let symbolKeys = Object.getOwnPropertySymbol(obj)
+```
+
+获取两个相同的Symbol
+
+* 通过Symbol.for方法来做到这一点
+* 可以通过Symbol.keyFor方法来获取对应的key (当前symbol的描述)
+
+```javascript
+const s1 = Symbol()
+const s2 = Symbol()
+consolel.log(s1 === s2) //true
+
+const s3 = ('sdfs')
+console.log(Symbol.keyFor(s3)) // sdfs
+```
+
+## 6.10.Set
+
+* 类似数组，但是``数据不能重复``
+* new Set(iteration)
+  * 入参是``可迭代的元素``
+
+常见的属性和方法
+
+* **size**
+  * 获取集合元素中的个数
+* **add(value)**
+  * 添加某个元素，``返回Set对象本身``
+* **delete(value)**
+  * 从Set中删除和这个值相等的元素，``返回Boolean类型``
+* **has(value)**
+  * 判断set中是否存在某个元素，``返回Boolean类型``
+* **clear()**
+  * 清空set中所有的元素，``没有返回值``
+* **forEach(callback [, thisArg])**
+  * 通过forEach遍历set
+
+```javascript
+const s1 = new Set([1,2,3])
+s1     //  {1,2,3}
+```
+
+### 6.7.1.WeakSet
+
+**弱引用和强引用**
+
+``强引用（strong reference）：``
+
+​	设有个一变量obj，他的值是{name:'zs'}，当js的垃圾回收（GC）运行时，根据可达性的原理，发现{name:'zs'}这个对象被obj变量所引用着，那么就不会将其清理掉，这就是强引用
+
+``弱引用（weak reference）：``
+
+​	设有一个变量obj，他的值是{name:'zs'},虽然他也被obj引用着，但是通过别的方式将这个引用变成弱引用了，那么当GC运行时，就会忽略这个引用，然后{name:'zs'}这个对象就可能被回收
+
+``WeakSet``就是弱集合的意思，也就是说他的引用的值，就是``弱引用``
+
+**WeakSet和Set的区别**
+
+* WeakSet中``只能存放对象类型，不能存放基本数据类型``
+* WeakSet``对元素的引用是弱引用``，如果他引用的值没有被其他变量引用，那么GC可以对该引用的值进行回收
+* WeakSet是不能遍历的
+  * 因为``WeakSet是弱引用``，如果我们遍历获取其中的元素，那么可能造成对象不能正常的销毁
+
+```javascript
+cosnt arr = [{name: 'zs'}]
+const weakS = new weakSet(arr)
+```
+
+## 6.11.Map
+
+* 也是键值对形式
+* 键是``任意类型``
+
+常见的属性和方法
+
+* **size**
+  * 返回Map中元素的个数
+* **set(key, value)**
+  * 在Map添加key、value，``并返回整个Map对象``
+* **get(key)**
+  * 根据key获取Map中的value
+* **has(key)**
+  * 判断是否包含某一个key，``返回Boolean``
+* **delete(key)**
+  * 根据key删除一个键值对，``返回Boolean``
+* **clear()**
+  * 清空所有元素
+* **forEach(callback [, thisArg])**
+
+```javascript
+const m1 = new Map([
+    ['建','值'],
+    [1,2]
+])
+```
+
+
+
+### 6.11.1.WeakMap
+
+* WeakMap的``key只能使用对象``，不接受其他类型作为key
+* WeakMap的``key对对象的引用是弱引用``，如果没有其他引用引用这个对象，那么GC可以回收该对象
+* ``不支持遍历``
+
+```javascript
+const obj1 = {name: 'zs'}
+const wm = new WeakMap()
+wm.set(obj1, 123)
+```
+
+# 7.ES7~ES13新特性
+
+## 7.1.ES7新特性
+
+### 7.1.1.Array.includes
+
+查询mdn
+
+### 7.1.2. 指数运算符
+
+求一个数的多少次方，用``**``表示
+
+```javascript
+Math.pow(2,3)
+2 ** 3
+```
+
+## 7.2.ES8新特性
+
+### 7.2.1.Object.values
+
+* 获取对象中所有对值
+
+* ```javascript
+  const obj = {
+      name: 'zs',
+      age: 19
+  }
+  const val = Object.values(obj)
+  // ['zs', 19]
+  ```
+
+### 7.2.2.Object.entries
+
+* 可以获取一个数组，数组中``会存放可枚举属性的键值对的数组``
+
+```javascript
+const obj = {
+    name: 'zs',
+    age: 19
+}
+const ent = Object.entries(obj)
+// ent  [ ["name", "zs"], ["age", 19] ]
+for (let item of ent) {
+	const [key,value] = item
+    console.log(key,value)
+}
+
+// 如果是一个数组
+console.log(Object.entries([1,2,3])) 
+// [['0', 1], ['1', 2], ['2', 3]]
+
+// 如果是字符串
+console.log(Object.entries('aa'))
+//[['0','a'],['1','a']]
+```
+
+### 7.2.3.字符串填充
+
+* **padStart(targetLength[, padString])**
+* **padEnd(targetLength[, padString])**
+* targetLength:当前字符串需要填充的目标长度，``如果小于这个长度``将用padString进行填充
+
+```javascript
+// 格式化日期
+const hh = "3".padStart(2, "0");
+const mm = "15".padStart(2, "0");
+console.log(`${hh}:${mm}`);
+// 03:15
+
+// 加密身份证或者银行卡
+const cardNum = '411989199901011234'
+const lastFour = cardNum.slice(-4)
+const resNum = lastFour.padStart(cardNum.length, '*')
+
+```
+
+ 
+
+## 7.3.ES10
+
+### 7.3.1.flat
+
+* 将一个数组，按照规定的深度遍历，将遍历到的元素和子数组中的元素组成一个新的数组，然后返回
+* **flat(depth)**
+  * 按照深度去遍历,默认值是1
+
+```javascript
+// 更多案例查询mdn文档
+const nums = [1,2,[1,2],[[1,2]]]
+const flatNum = nums.flat(1)
+console.log(flatNum) // [1,2,1,2,[1,2]]
+```
+
+### 7.3.2.flatMap
+
+* 方法首先使用映射函数映射每个元素，然后将结果压缩成一个新数组
+* 做了``两步操作``
+  * 首先对数组进行``map操作``
+  * 然后在对操作之后的数组进行``flat(1)``的操作
+
+```javascript
+const msg = ["hello world", "hello zs"];
+const newMsg = msg.flatMap((item) => item.split(" "));
+console.log(newMsg); // ['hello', 'world', 'hello', 'zs']
+```
+
+### 7.3.3.fromEntries
+
+* 将转为entries的对象，变成没转之前的状态
+
+```javascript
+const obj = {
+    name: 'zs',
+    age: 19
+}
+let objEntries = Object.entries(obj)
+// [ ['name', 'zs'],['age', 19] ]
+let transObj = Object.fromEntries(objEntries)
+// {name: 'zs', age: 19}
+
+```
+
+### 7.3.4.trimStart
+
+* 去除首部的空格
+
+```javascript
+const str = ' hello world'
+const trimS = str.trimStart()
+// 'hello world'
+```
+
+
+
+### 7.3.5.trimEnd
+
+* 去除尾部的空格
+
+```javascript
+const str = ' hello world '
+const trimS = str.trimEnd()
+// ' hello world'
+```
+
+## 7.4.ES11
+
+### 7.4.1.BigInt
+
+* 在早期的JavaScript中，不能正确的表示过大的数字
+* 大于``Number.MAX_SAFE_INTEGER``的数值，表示的可能不正确
+* 使用``BigInt``即可，在要表示的数后面添加``n``
+
+```javascript
+console.log(Number.MAX_SAFE_INTEGER)
+// 9007199254740991
+console.log(9007199254740991 + 1) // 9007199254740992
+console.log(9007199254740991 + 2) // 9007199254740992
+
+
+// 使用BIGINT
+console.log(9007199254740991n + 2n) // 9007199254740993
+console.log(9007199254740991n + 5n) // 9007199254740996
+```
+
+### 7.4.2.空值合并运算符
+
+* Nullish Coalescing Operator
+* 使用``??``，如果??前面的值是``null``或``undefined``,那么就使用``??后面的值``
+
+```javascript
+let info = undefined
+info = info ?? '默认值'
+//  info  默认值  
+```
+
+### 7.4.3.可选链操作符
+
+* optional chaining
+* 允许读取位于连接对象链深处的属性的值，而不必明确验证链中的每个引用是否有效,如果没有找到，该表达式短路返回值是 `undefined`
+
+```javascript
+const obj = {
+name:'zs'
+}
+obj?.asy?.()
+```
+
+### 7.4.4.Global this
+
+* 规范了获取全局对象使用``globalThis``
+
+## 7.5.ES12
+
+### 7.5.1.FinalizationRegistry
+
+* 可以让对象在被垃圾回收的时候请求一个回调
+* FinalizationRegistry提供一种方法，``当一个在注册表中的对象被垃圾回收时，请求在某个时间点上调用一个清理回调``（清理回调有时被称为finalizer）
+* 可以通过``调用register方法，注册热河想要清理回调的对象``，传入该对象和所含的值
+
+```javascript
+// register的第二个参数，自定义标识符
+// 如果有第二个参数，那么在执行回调的时候，参数就是传入的自定义标识符
+let obj = [{ name: "zs" }];
+let info = { a: 123 };
+const finalization = new FinalizationRegistry((val) => {
+    console.log("对象被回收了", val);
+});
+
+finalization.register(obj, "obj");
+finalization.register(info, "info");
+
+obj = null;
+
+// 检测WeakMap是否会被GC删除
+// 结果会调用回调，证明会被GC回收
+// 如果将WeakMap换成Map就不会执行回调
+let obj = { name: "123" };
+let wp = new WeakMap();
+
+wp.set(obj, 123);
+
+const finalization = new FinalizationRegistry(() => {
+    console.log("first");
+});
+finalization.register(obj);
+obj = null;
+```
+
+### 7.5.2.WeakRefs
+
+* **WeakRefs: 弱引用**
+
+```javascript
+let obj = { name: "zs" };
+let wr = new WeakRef(obj);
+
+let finalization = new FinalizationRegistry((val) => {
+    console.log("对象被回收", val);
+});
+
+finalization.register(obj, "obj");
+
+// 此时obj指向的对象已经被回收了，
+obj = null;
+```
+
+### 7.5.3.逻辑赋值运算符
+
+* ||=
+* ??=
+* &&=
+
+```javascript
+function foo(message) {
+    // 1.||逻辑运算符
+    // message = message || '默认值'
+    // message ||= '默认值'
+    
+    // 2. ?? 逻辑运算符
+    message = message ?? '默认值'
+    message ??= '默认值'
+    
+    console.log(message)
+}
+foo(0)  // 0
+foo()  // 默认值
+
+let obj = {
+    name:'zs'
+}
+obj = obj && obj.name
+obj &&= obj.name
+```
+
+### 7.5.4.数字分割
+
+* Numeric Separator
+* 使用下划线分割较大的数字
+
+```javascript
+const num = 123_0000_0000
+```
+
+### 7.5.5.字符串替换
+
+* String.prototype.replaceAll()
+* 可以替换全部的字符串
+* String.prototype.replace()只能替换一次
+
+## 7.5.ES13
+
+### 7.5.1.Object.hasOwn
+
+* Objcet.hasOwn(obj, propKey)
+* 用来替代Object.prototype.hasOwnProperty()方法的
+
+### 7.5.2.method.at
+
+* 查mdn
+
+### 7.5.3.class的新成员
+
+* **Instance publish fields**
+  * 实例的公共字段，每个实例都有的字段
+* **Static public fields**
+  * 类的静态字段
+* **Instance private fields**
+  * 
+* **static block**
+  * 类的静态代码块，当类加载的时候执行一次
+
+```javascript
+class Person {
+    // 所有实例都可有这个属性
+    height = 1.88
+	constructor() {}
+	// 类的静态属性
+	static address = '河南'
+	// 类的静态私有属性, 只有类内部能够访问
+	// 用this.访问
+	static #number = 12
+    // 类的静态代码块
+    static {
+        console.log('只有类初始化时候执行一次')
+    }
+}
+```
+
+
+
+# 8.Proxy
+
+* 对``一个对象进行代理``，之后``对该对象的所有操作``都是``通过代理对象``来完成的
+* new Proxy(target, handler)
+* target : 要代理的对象
+* handler：被代理对象的行为
+  * 内置很多个方法（只列出几个，剩余的查mdn）
+
+```javascript
+const obj = {
+    name: "zs",
+    age: 19,
+};
+
+// target表示被代理的源对象
+// key 被查看、操作的对象的属性
+// val 被修改的新值
+// receiver 被代理的对象
+const proxyObj = new Proxy(obj, {
+    set(target, key, val, receiver) {
+        console.log(`监听了${key},值是${val}`);
+        target[key] = val;
+    },
+
+    get(target, key) {
+        console.log(`监听了${key}`);
+        return target[key];
+    },
+
+    deleteProperty(target, key) {
+        delete target[key];
+    },
+
+    has(target, key) {
+        console.log(`${key}被判断是否存在${target}中`);
+        return key in target;
+    },
+});
+
+proxyObj.name = "jack";
+proxyObj.address = "河南";
+proxyObj.age;
+delete proxyObj.address;
+console.log("age" in proxyObj);
+```
+
+# 9.Reflect
+
+* Reflect是一个对象，字面意思是``反射``
+* 主要提供了很多操作JavaScript对象的方法，有点像Object中操作对象的方法
+* 将``Object对象中对 对象本身进行操``作的API迁移到了Reflect上，并且又新增了一些别的方法
+
+Reflect和Object的区别
+
+* 早期的ECMA规范中没有考虑这中``对 对象本身的操作如何设计会更加规范``，所以将API放到了Object上
+* 但是``Object作为一个构造函数``这些操作实际放到它身上并不合适
+* 另外还包含一些``类似于in、delete操作符``让js看起来会有一些奇怪
+* 所以在ES6中``新增了Reflect``，让我们这些操作都集中到了Reflect对象上
+* 另外在使用proxy时，可以做到``不操作原对象``
+
+```javascript
+const obj = {
+    name: "zs",
+    age: 19,
+};
+// 返回 对象本身
+console.log(
+    Object.defineProperty(obj, "name", {
+        configurable: false,
+    })
+);
+// 返回Boolean值  false上面设置了configurable：false
+console.log(
+    Reflect.defineProperty(obj, "name", {
+        enumerable: false,
+    })
+);
+
+// 都返回Boolean 但是后者的书写的语义更加明确
+console.log(delete obj.name); // false
+console.log(Reflect.deleteProperty(obj, "name"));  // false
+```
+
+## Reflect和Proxy的搭配使用
+
+* 好处一：
+  * 代理对象的目的：不直接操作原对象
+* 好处二：
+  * Reflect.set方法返回Boolean值，可以判断本次的操作是否成功
+* 好处三：
+  * 见下面案例``好处三``
+
+```javascript
+const obj = {
+    name: "zs",
+    age: 19,
+};
+
+Reflect.defineProperty(obj, "name", {
+    configurable: false,
+    writable: false,
+});
+// 使用Reflect对对象进行操作，可以进行间接操作对象
+// 可以返回一个Boolean值
+// 如果对象的属性被保护起来了，那么可以判断操作是否成功
+// 避免了严格模式下报错
+const proxyObj = new Proxy(obj, {
+    set(target, key, newVal, receiver) {
+        let isConfig = Reflect.set(target, key, newVal, receiver);
+        // let isConfig = target[key];
+        console.log(isConfig);
+        if (!isConfig) {
+            console.log(`${key}属性不支持该操作`);
+        }
+    },
+});
+proxyObj.name = "河南";
+console.log(proxyObj);
+```
+
+案例``好处三``
+
+```javascript
+const obj = {
+    _name: "zs",
+    set name(newVal) {
+        this._name = newVal;
+    },
+    get name() {
+        return this._name;
+    },
+};
+
+//  Reflect的receiver参数表示
+//  set/get（obj中的set/get） 方法执行的时候的this
+
+// 如果没有传入receiver，那么obj中的set在调用的时候只监听了一次
+// 当调用proxyObj.name的时候其实是调用了两次set方法
+// 第一次是调用了proxyObj的set，然后执行了Reflect.set（）
+// 调用了obj的set方法，但是此时obj的set中的this指向的是obj
+// 操作源对象，proxyObj无法监听到，所以只监听了一次
+
+// 如果传入receiver，
+// 当执行Reflect.set()，时候，obj的this已经变成了proxyObj这个代理对象
+// this._name其实就是proxyObj._name
+// 那么又会执行proxyObj的set方法，所以就可以监听两次
+
+// get方法和上述同理
+
+// 如果不使用Reflect的方法操作对象，那么也只会监听一次，因为obj的this就是指向obj本身
+
+// 所以 如果想要监听两次操作，就使用Reflect，如果不在乎的话，也可以使用target[key]
+
+let proxyObj = new Proxy(obj, {
+    set(target, key, newVal, receiver) {
+        console.log("设置了值");
+        Reflect.set(target, key, newVal, receiver);
+    },
+    get(target, key, receiver) {
+        console.log("获取了值");
+        return Reflect.get(target, key, receiver);
+    },
+});
+
+proxyObj.name = "123";
+proxyObj.name;
+```
+
+# 10.Promise
+
+* promise是一个类
+* 在通过new创建Promise对象时，传入一个回调函数，我们称之为executor
+  * 这个回调函数会被立即执行 ，并且给传入两个回调函数resolve，reject
+  * 当``调用resolve``回调函数时，``会执行Promise对象的then方法``传入的回调函数
+  * 当``调用reject``回调函数时，``会执行Promise对象的catch方法``传入的回调函数
+
+## 10.1.promise的状态
+
+* **pending（待定）**
+  * 初始状态，既没有被兑现，也没有被拒绝，
+* **fulfilled（已对象）**
+  * 意味着操作成功，执行了resolve时，处于该状态
+* **rejected（已拒绝）**
+  * 意味着操作失败，执行reject时，处于该状态
+
+## 10.2.注意
+
+* **Executor**是在创建Promise时需要传入的一个回调函数，``这个回调函数会被立即执行``，并且传入两个参数(Executor是传入的回调的叫法)
+
+* Promise的``状态一旦被确定下来，就不会更改``，也不能在执行某一个回调函数来改变状态
+  * 一旦``调用了resolve或者reject``，就``不能在调用这两个中的任意一个``，调用了也没有反应
+
+## 10.3.resolve的值
+
+* 如果传入``一个普通的值或者对象``，那么这个值将``作为then方法的回调的参数``
+* 如果resolve中传入的是``另外一个Promise``，那么这个``新Promise会决定原来的Promise的状态``
+* 如果resolve中传入的是一个``对象``，并且这个``对象中有then方法``，那么会执行then方法，并根据``then方法的结果来决定promise的状态``
+
+```javascript
+const p = new Promise((resolve, reject) => {
+    resolve("p的resolve");
+});
+const promise = new Promise((resolve, reject) => {
+    // 1. resolve() 普通的值
+    // resolve(123);
+
+    // 2. resolve() 一个promise， 这个新的promise会决定原promise的状态
+    // resolve(p);
+
+    // 3. resolve() 一个带有then方法的对象
+    resolve({
+        name: "22",
+        then(resolve, reject) {
+            // resolve("hhh");
+            reject("ss");
+        },
+    });
+});
+
+promise
+    .then((val) => console.log(`结果：${val}`))
+    .catch((err) => console.error(err));
+```
+
+## 10.4.then方法相关
+
+* 可以调用多次then方法，里面的回调都会被调用
+* 可以将catch写在then方法中
+* 写then的时候后面最好跟一个catch方法，不然如果promise中拒绝了，那么外面就会报错
+
+```javascript
+const promise = new Promise((reslove, reject) => {
+    reslove('成功的回调')
+    // reject('失败的回调')
+})
+
+promise.then(() => {})
+promise.then(() => {})
+
+promise.then(res => {}, err => {})
+
+```
+
+### 10.4.1.then方法支持链式调用
+
+* then方法的``返回值也是一个Promise``**,所以可以支持链式调用**
+
+```javascript
+// then方法返回一个新的promise，这个新的promise的决议（resolve/reject）是等到then方法传入的回调函数有返回值时进行决议的
+const promise = new Promise((resolve, reject) => {
+    resolve("aaa");
+    // reject("ss");
+});
+
+// then方法中的返回值的类型(见上面的10.3)
+// 普通值
+// 新的Promise
+// thenable对象（对象中有then方法）
+promise
+    .then((res) => {
+    console.log(res); // aaa
+    return "hhh";
+    // return {
+    //   then(resolve, reject) {
+    //     reject(0.11);
+    //   },
+    // };
+})
+    .then((res) => {
+    console.log(res); // hhh
+});
+
+// then方法相当于做了以下的操作
+// 所以如果then方法中没有返回值，那么下个then方法中的结果就是undefined
+function then(cb) {
+    let res = cb();
+    return new Promise((resolve, reject) => {
+        resolve(res);
+    });
+}
+```
+
+## 10.5.catch方法相关
+
+* 可以调用多次catch方法，里面的回调都会被调用
+
+```javascript
+const promise = new Promise((reslove, reject) => {
+    reject('失败的回调')
+    // reject('失败的回调')
+})
+
+promise.reject(() => {})
+promise.reject(() => {})
+```
+
+### 10.5.1.catch的链式调用
+
+* then方法的``返回值也是一个Promise``**,所以可以支持链式调用**
+
+```javascript
+const promise = new Promise((resolve, reject) => {
+    reject("ee");
+});
+
+// catch方法也会返回一个新的Promise
+// catch方法默认返回undefined
+// 如果写了return 或者默认的返回，那么决议就是resolve，链式调用的下一级就会进入到then方法中
+// 所以默认情况下不能一直.catch().catch()调用
+// 如果想使用.catch.catch，那么可以在每个catch中抛出一个异常，这样就可以一直被catch所捕获
+promise
+    .catch((err) => console.log(err)) //ee
+    .then((res) => console.log(res)) // undefined
+    .then((res) => console.log(res)); // undefined
+
+const promise1 = new Promise((resolve, reject) => {
+    resolve("ee");
+});
+
+// 如果有promise的决议是reject的，那么会找到最近的catch方法进行调用
+// 所以下面代码会在执行第一个then后，直接执行catch方法
+// 使用throw 或者 return一个新的promise（决议是reject）都会进入catch中
+promise1
+    .then((res) => {
+    console.log(res, "asa");
+    throw new Error("报错");
+})
+    .then((res) => console.log(res))
+    .catch((err) => console.log(err));
+
+// catch方法相当于做了以下的操作
+function catch1(cb) {
+    let res = cb();
+    return new Promise((resolve, reject) => {
+        resolve(res);
+    });
+}
+```
+
+##  10.6.finally方法相关
+
+* es9新增的新特性
+* 表示``无论Promise对象无论变成fulfilled还是rejected状态，最终都会被执行的代码``
+* finally方法不接受参数，因为无论前面是fulfilled还是rejected状态，他都会执行
+
+## 10.7.Promise的类方法
+
+### resolve方法
+
+* 就是``new promise(resolve => resolve())``的语法糖
+
+### reject方法
+
+* 就是``new promise((resolve,reject) => reject())``的语法糖
+
+### all方法
+
+* 他的作用是``将多个Promise包裹在一起形成一个新的Promise``
+* ``新的Promise状态由包裹的所有Promise共同决定``
+  * 当``所有的Promise状态变成fulfilled状态``时，``新的Promise状态为fulfilled``，并且会``将所有的Promise的返回值组成一个新的数组``
+  * 当``有一个Promise状态为reject时``，新的``Promise状态为reject``，并且会``将第一个reject的返回值作为参数``，给catch方法
+
+```javascript
+const promise = new Promise((reslove, reject) => {
+    setTimeout(() => {
+        reslove("11");
+    }, 3000);
+});
+const promise1 = new Promise((reslove, reject) => {
+    setTimeout(() => {
+        reslove("22");
+    }, 2000);
+});
+const promise2 = new Promise((reslove, reject) => {
+    setTimeout(() => {
+        reslove("33");
+    }, 1000);
+});
+
+// 如果上面的三个promise中有一个reject，那么不用等到全部promise执行完毕，直接调用catch，剩余没有执行的promise也不会执行了
+Promise.all([promise, promise1, promise2])
+    .then((res) => {
+    console.log(res); //["11", "22", "33"];
+})
+    .catch((err) => console.log(err));
+```
+
+### allSettled
+
+* es11中新增的方法
+* 该方法``会在所有的Promise都有结果(settled)``，（无论是fulfilled还是rejected），``才会有最终的状态 ``
+* 并且这个Promise的``结果``一定是``fulfilled状态的``
+
+```javascript
+const promise = new Promise((reslove, reject) => {
+    setTimeout(() => {
+        reject("11");
+    }, 3000);
+});
+const promise1 = new Promise((reslove, reject) => {
+    setTimeout(() => {
+        reslove("22");
+    }, 2000);
+});
+const promise2 = new Promise((reslove, reject) => {
+    setTimeout(() => {
+        reslove("33");
+    }, 1000);
+});
+Promise.allSettled([promise, promise1, promise2]).then((res) => {
+    console.log(res);
+});
+// [
+//   { status: "rejected", reason: "11" },
+//   { status: "fulfilled", value: "22" },
+//   { status: "fulfilled", value: "33" },
+// ];
+```
+
+### race方法
+
+* race是竞赛、竞技的意思
+* 表示多个Promise，``谁先有结果那么就使用谁的结果``
+* ``无论Promise的状态是fulfilled还是rejected``
+
+```javascript
+const promise = new Promise((reslove, reject) => {
+    setTimeout(() => {
+        reject("11");
+    }, 300);
+});
+const promise1 = new Promise((reslove, reject) => {
+    setTimeout(() => {
+        reslove("22");
+    }, 2000);
+});
+const promise2 = new Promise((reslove, reject) => {
+    setTimeout(() => {
+        reslove("33");
+    }, 1000);
+});
+Promise.race([promise, promise1, promise2])
+    .then((res) => {
+    console.log(res);
+})
+    .catch((err) => console.log(err));
+// 11
+```
+
+### any方法
+
+* es12新增的方法 
+* any方法等到一个fulfilled状态，才会决定新Promise的状态
+* 如果所有的Promise都是rejected，那么也会等到所有的Promise都变成rejected状态，然后会进入catch方法，catch方法的内容是内部处理的
