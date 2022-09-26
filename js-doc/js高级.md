@@ -203,7 +203,7 @@ foo(10,20) // 230
 维基百科解释：
 
 * 在计算机科学中，柯里化（Currying），又被译为卡瑞化、加里化
-* 时把接收多个参数的函数，变成接收一个单一参数的函数，并且返回接收余下的参数，而且返回结果的新函数的技术
+* 把接收多个参数的函数，变成接收一个单一参数的函数，并且返回接收余下的参数，而且返回结果的新函数的技术
 
 自己的理解：
 
@@ -2009,4 +2009,406 @@ Promise.race([promise, promise1, promise2])
 
 * es12新增的方法 
 * any方法等到一个fulfilled状态，才会决定新Promise的状态
-* 如果所有的Promise都是rejected，那么也会等到所有的Promise都变成rejected状态，然后会进入catch方法，catch方法的内容是内部处理的
+  * 如果``有一个Promise是fulfilled``，那么直接调用then方法，``只会``将当前的内容传进去
+* 如果所有的Promise都是rejected，那么也会等到所有的Promise都变成rejected状态，然后会进入catch方法，会报一个``AggregateError``的错误
+
+```javascript
+const promise = new Promise((reslove, reject) => {
+    setTimeout(() => {
+        reject("11");
+    }, 300);
+});
+const promise1 = new Promise((reslove, reject) => {
+    setTimeout(() => {
+        reject("22");
+    }, 2000);
+});
+const promise2 = new Promise((reslove, reject) => {
+    setTimeout(() => {
+        reject("33");
+    }, 1000);
+});
+Promise.any([promise, promise1, promise2])
+    .then((res) => {
+    console.log(res);
+})
+    .catch((err) => console.log(err));
+// AggregateError: All promises were rejected
+```
+
+# 11.Iterator(迭代器)
+
+* **在Javascript中，迭代器也是哟个具体的对象，这个对象需要符合迭代器协议**（iterator protocol）
+  * 迭代器协议定义了``产生一系列值（无论是有限还是无线个）的标准方式``
+  * 在JavaScript中这个标准就是一个``特点的next方法``
+
+**next方法有如下的要求**
+
+* 一个``无参数或者一个参数的函数``，返回一个应当``拥有以下两个属性的对象``
+* **done(Boolean)**
+  * 如果迭代器``可以产生序列中的下一个值``，则为false
+  * 如果迭代器``已将序列迭代完毕``，则为true，这种情况下，value是可选的，如果它依然存在，即为迭代结束之后的默认返回值（一般情况是undefined）
+* **value**
+  * 迭代器返回的任何JavaScript值。``done为true时可以省略``
+
+```javascript
+// namesIterator对象就是names的迭代器
+const names = ["a", "b", "c"];
+let i = 0;
+const namesIterator = {
+    next() {
+        if (i < names.length) {
+            return { done: false, value: names[i++] };
+        } else {
+            return { done: true, value: names[i++] };
+        }
+    },
+};
+console.log(namesIterator.next());
+console.log(namesIterator.next());
+console.log(namesIterator.next());
+console.log(namesIterator.next());
+```
+
+
+
+## 11.1.可迭代对象
+
+* 当一个对象``实现了iterable protocol协议时``，他就是一个可迭代对象
+* 这个对象的要求是``必须实现@@iterator方法``，在代码中``使用Symbol.iterator访问该属性``
+* 如果想让一个对象变成可迭代的对象，那么需要在这个``对象中返回一个迭代器``
+* 这个对象中必须有``属性名是[Symbol.iterator]``方法
+  * 方法名 是 Symbol.iterator  这个是Symbol类的方法所以``要用计算属性名``
+  * 这个方法返回一个迭代器
+
+```javascript
+const infos = {
+    name: "jack",
+    age: 19,
+    height: 1.88,
+    [Symbol.iterator]() {
+        // 获取key
+        // let keys = Object.keys(this);
+        // 获取值
+        // let values = Object.values(this);
+        // 获取entries(键值对)
+        let entries = Object.entries(this);
+        let index = 0;
+
+        let iterator = {
+            next: () => {
+                if (index < entries.length) {
+                    return { done: false, value: entries[index++] };
+                } else {
+                    return { done: true, value: undefined };
+                }
+            },
+        };
+        return iterator;
+    },
+};
+
+for (let info of infos) {
+    console.log(info);
+}
+```
+
+
+
+## 11.2.可迭代对象的应用
+
+**JavaScript中语法(常用)**
+
+* for...of
+* 展开语法（spread syntax）
+* yield*
+* 解构赋值（Destructuring_assignment）
+
+**创建一些对象时：**
+
+* new Map([iterator]) / new WeakMap([iterator])
+* new Set([iterator]) / new WeakSet([iterator])
+
+一些方法的调用
+
+* Promise.all(iterator)
+* Promise.race(iterator)
+* Array.from(iterator)
+
+## 11.3.自定义类的迭代
+
+```javascript
+class Person {
+    constructor(name, age, height, friends) {
+        this.name = name;
+        this.age = age;
+        this.height = height;
+        this.friends = friends;
+    }
+
+    [Symbol.iterator]() {
+        let index = 0;
+        let values = Object.values(this);
+        return {
+            next() {
+                if (index < values.length) {
+                    return { done: false, value: values[index++] };
+                } else {
+                    return { done: true, value: values[index++] };
+                }
+            },
+        };
+    }
+}
+
+const p1 = new Person("jack", 18, 1.88, ["rose", "lily"]);
+
+for (let item of p1) {
+    console.log(item);
+}
+```
+
+## 11.4.终端检测器
+
+* 迭代器在某些情况下没有完全迭代的情况下终端
+  * 比如遍历的过程中通过break、return、throw中断了循环操作
+  * 比如在解构时候，没有解构所有的值
+* 就是迭代器的``return方法``
+
+```javascript
+const infos = {
+    name: "jack",
+    age: 19,
+    height: 1.88,
+    [Symbol.iterator]() {
+        // 获取值
+        let values = Object.values(this);
+        let index = 0;
+
+        let iterator = {
+            next: () => {
+                if (index < values.length) {
+                    return { done: false, value: values[index++] };
+                } else {
+                    return { done: true, value: undefined };
+                }
+            },
+            return() {
+                console.log("进入终端监测");
+                return { done: true };
+            },
+        };
+        return iterator;
+    },
+};
+const [name] = infos;
+// console.log(name);
+```
+
+
+
+# 12.Generator(生成器)
+
+## 12.1.什么是生成器
+
+* 生成器是ES6中新增的``一种函数控制、使用的方案``，它可以让我们更加灵活的``控制函数什么时候继续执行、暂停执行``等
+
+* ``生成器``是``由生成器函数``所创造的
+* ``生成器函数也是函数``，但是和普通函数有些区别
+  * 首先，生成器函数需要在``function后面``加一个符号`` *``
+
+    * 符号挨着function后面，或者挨着函数名前面都行
+
+    * 如果没有function关键字声明的函数，``*``直接加在``名字前面``
+
+    * ```javascript
+      let info = {
+          *next() {}
+      }
+      ```
+  * 其次，生成器函数``可以通过yield关键字``来控制函数的执行流程
+  * 最后，生成器函数返回值是一个``Gererator(生成器)``：
+
+    * 生成器事实上是一种特殊的迭代器
+
+```javascript
+function* foo() {
+    console.log("first");
+    console.log("first");
+    yield；
+    console.log("first`q");
+    console.log("first`q");
+}
+
+const gererator = foo();
+```
+
+## 12.2.生成器函数执行
+
+* 生成器函数的代码``直接调用是不会执行``的
+  * 因为生成器函数``返回一个生成器``
+* 通过``调用``返回的``生成器的next方法``来执行生成器函数中的代码块
+
+
+
+* 当执行代码的过程中``遇到yield关键字``的时候会``暂停执行``
+  * next函数是有返回值的
+* 如果想``继续执行``，需要``再次调用next``函数
+* ``yield 后面可以跟值``
+  * 这个值就会作为next返回值中对象的value的值
+* 调用``next的时候可以传参``，但是这个参数会在yield之后的代码中接收到
+
+```javascript
+// next函数传参 第一次执行next无法接收到，一般直接传在函数中
+function* foo(res) {
+    console.log("111", res);
+    console.log("111", res);
+    const res1 = yield "萘萘萘";
+    // return "萘萘萘";
+    console.log("222", res1);
+    console.log("222", res1);
+    const res2 = yield "哈哈哈";
+    console.log("333", res2);
+    console.log("333", res2);
+}
+
+const gererator = foo("第一个");
+console.log(gererator.next());
+console.log(gererator.next("第二个"));
+console.log(gererator.next("第三个"));
+
+// 执行结果如下
+// {value: '萘萘萘', done: false} 这种是next函数的返回值
+// 如果遇到return后续代码不会执行，next的返回值是 {value: '萘萘萘', done: true}
+// 之后在执行next 返回值都是 {value: undefined, done: true}
+/*
+        111 第一个
+        111 第一个
+        {value: '萘萘萘', done: false}
+        222 第二个
+        222 第二个
+        {value: '哈哈哈', done: false}
+        333 第三个
+        333 第三个
+         {value: undefined, done: true}
+      */
+```
+
+## 12.3.生成器函数提前结束
+
+* 除了在函数中直接使用return，也可以用下面的方式
+
+```javascript
+function* foo() {
+    try {
+        console.log("1111");
+        const c1 = yield "aaa";
+        console.log("2222", c1);
+        const c2 = yield "bbb";
+        console.log("3333", c2);
+    } catch (error) {
+        console.log(error);
+    }
+}
+```
+
+### 使用return函数
+
+* return传值后这个生成器函数就会结束，之后调用next不会继续生成值了
+
+* ```javascript
+    const genetarorFoo = foo();
+        console.log(genetarorFoo.next("@@@"));
+        console.log(genetarorFoo.return('###');
+        console.log(genetarorFoo.next("$$$"));
+  ```
+
+### 使用throw函数
+
+* 抛出异常后可以在生成器函数中捕获异常
+
+* 但是在catch语句中不能继续yield新的值了，但是可以在catch语句外使用yield继续中断函数的执行
+
+* ```javascript
+  const genetarorFoo = foo();
+  console.log(genetarorFoo.next("@@@"));
+  console.log(genetarorFoo.throw(new Error()));
+  console.log(genetarorFoo.next("$$$"));
+  ```
+
+# 13.生成器替代迭代器
+
+* 生成器本身就是特殊的迭代器
+* 生成器函数返回的是一个生成器，可以调用next方法
+* 当遇到yield时候，返回值的done是false
+* 没有yield时候，返回值的done是true
+
+## 13.1.生成器代替迭代器应用场景
+
+```javascript
+const names = ['jack', 'rose', 'lily']
+
+function* createIterator(iter) {
+for (let i = 0; i < iter.length; i++) {
+yield iter[i]
+}
+// yield iter[0]
+// yield iter[1]
+// yield iter[2]
+}
+
+const namesIterator = createIterator(names)
+
+console.log(namesIterator.next()) // {value: 'jack', done: false}
+console.log(namesIterator.next()) // {value: 'rose', done: false}
+console.log(namesIterator.next()) // {value: 'lily', done: false}
+console.log(namesIterator.next()) // {value: undefined, done: true}
+
+```
+
+**可迭代对象的优化版本**
+
+* 可迭代对象的标准
+  * [Symbol.iterator]方法中返回一个迭代器
+* 生成器本身就是一个特殊的迭代器
+
+```javascript
+const infos = {
+    firends: ["jack", "rose", "lily"],
+    *[Symbol.iterator]() {
+       yield* this.firends;
+    },
+};
+
+for (let info of infos) {
+    console.log(info);
+}
+```
+
+## 13.2.yield* 的使用
+
+* yield* 可以产生一个可迭代对象
+* yield* 后面跟的必须是一个``可迭代的对象``
+* yield*相当于是一种yield的语法糖，他会``依次迭代后面跟着的可迭代对象的内容``
+
+```javascript
+const names = ['jack', 'rose', 'lily']
+yield* names
+
+相当于
+
+yield 'jack'
+yield 'rose'
+yield 'lily'
+
+
+// 简化代码
+function* createIterator(arr) {
+    yield* arr
+}
+```
+
+
+
+## 
+
