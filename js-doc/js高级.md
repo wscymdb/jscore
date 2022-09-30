@@ -1,4 +1,4 @@
-# `JavaScript高级
+# JavaScript高级
 
 # 1.函数
 
@@ -9,8 +9,6 @@
 * new绑定this   ``大于``   隐式绑定的this
 * new绑定的this   ``大于``   bind绑定的优先级
 * bind绑定的this   ``大于``  apply、call绑定的this
-
-
 
 ``备注：``
 
@@ -2408,7 +2406,582 @@ function* createIterator(arr) {
 }
 ```
 
+# 14.async\await
+
+## 14.1.异步函数
+
+* async function
+* async是asynchronous的缩写，表示异步的
+
+## 14.2.异步函数的执行流程
+
+* 异步函数的内部代码执行过程和普通函数执行是一致的，默认情况下也会被同步执行
+* 异步函数有返回值时，和普通函数是有区别的
+  * ``情况一``：异步函数也是有返回值的，但是异步函数的返回值相当于被包裹到Promise.resolve中
+    * 没有返回值时，默认返回undefined
+  * ``情况二``：如果异步函数的返回值是Promise，那么这个返回值的状态由Promise决定
+  * ``情况三``：如果异步函数的返回值是一个对象，并且实现了thenable，那么状态会由对象的then方法来决定
+* 如果在async中出现了异常，那么程序并不会想普通函数一样报错，而是会作为Promise.reject来传递
+
+```javascript
+ async function foo() {
+        a.map(ss); // 报错 会在catch中被捕获
+        return "aaa";
+      }
+
+      // 代码中的报错会在catch中执行
+      foo()
+        .then((res) => console.log(res))
+        .catch((err) => console.log(err));
+```
 
 
-## 
+
+## 14.3.await关键字
+
+* async函数另外一个特殊之处就是可以在``他内部使用await关键字``，而普通函数是不可以的
+
+* await关键字的特点
+  * 通常使用await后面``会跟上一个表达式``，这个表达式会``返回一个Promise``
+  * await会``等到Promise的状态变为fulfilled状态``，之后``继续执行异步函数``
+
+* 如果await后面是一个``普通值``，那么会``直接返回这个值``
+
+  * 如果该值不是一个 Promise，await 会把该值转换为已正常处理的 Promise，然后等待其处理结果。
+
+  * ```javascript
+    async function foo() {
+        await 20;
+        //相当于 await Promise.resolve(20)
+    }
+    ```
+
+  * 
+
+* 如果await后面是一个``thenable对象``，那么会``根据thenable的then方法来调用后续的值``
+
+* 如果await后面的表达式，返回的Pomise是``rejected的状态``，那么会将这个``reject结果直接作为Promise的reject值``
+
+# 15.事件循环
+
+**面试题相关的知识储备**
+
+## 15.1.进程和线程
+
+* **``进程(process)``**：计算机``已经运行的程序``，是操作系统管理程序的一种方式
+* **``线程(thred)``**：操作系统能够运行``运算调度的最小单位``，通常情况下``他被包含在进程中``
+
+## 15.2.浏览器中的JavaScript线程
+
+* ``JavaScript是单线程的``
+
+**浏览器的进程**
+
+* 目前多数的``浏览器都是多进程的``，当我们``打开一个标签页就会开启一个新的进程``，这样做的目的是为了``防止一个页面卡死而造成所有页面无法响应``，整个浏览器需要强制退出
+* 每个进程又有很多线程，其中包括执行JavaScript代码的线程（js是单线程的）
+
+**JavaScript的代码是在一个单独的线程中执行的**
+
+* 这就意味着``JavaScript的代码同一时刻只能做一件事``
+* 如果这件事是``非常耗时的``，就意味着当前的线程``会被阻塞``
+
+**耗时的操作不是由JavaScript线程执行的**
+
+* 浏览器每个进程都是多线程的，那么``其余的线程可以来做这个耗时的操作``
+* 比如网络请求、定时器、我们只需要在``特定的时候执行应该有的回调即可``
+
+## 15.3.浏览器的事件循环
+
+* 当代码执行的时候如果``遇到了异步的操作``，浏览器会``将这些异步操作交给处理异步操作的线程``
+* 等到这些异步操作有结果了，异步操作的线程会将当前异步操作的回调``添加到事件队列里面``
+* 等到执行上下文调用栈中的执行上下文全部执行完毕后``（调用栈空了）``，去任务队列中寻找任务，将任务队列中的任务添加到执行上下文调用栈中执行
+* 此过程如果又有异步操作，那么继续重复上面的操作，此操作就称为``事件循环``
+* 
+* DOM监听、XMLHttpRequest、定时器都会被放入到事件队列中
+  * 浏览器会监听Dom事件的，然后将其放入到任务队列中
+  * ``队列是先进先出的``
+* 注意：
+* setTimeout(cb,1000)
+  * setTimeout是一个函数，里面有一个cb回调
+  * 程序执行到setTimeout时，会在调用栈中创建一个函数执行上下文，
+  * 然后将cb回调交给执行异步操作的线程
+  * 然后setTimeout函数执行上下文弹出栈
+  * 等到1000ms后，将其加到任务队列中
+
+```javascript
+
+```
+
+
+
+## 15.4.宏任务和微任务
+
+**事件循环中并非只维护着一个队列，事实上有两个队列**
+
+* **``宏任务队列（macrotask queue）``**：Ajax、setTimeout、setInterval、DOM监听、UI Rendering等
+* **``微任务队列（microtask queue）``**：Promise的then回调/catch回调、Mutilation Obrserver API、queueMicrotask等
+
+**两个队列的优先级**
+
+* ``main script中的代码优先执行``（编写的顶层script代码）
+* 在``执行任何一个宏任务之前（不是队列，是一个宏任务）``，都会``先查看微任务队列中是否有任务需要执行``
+  * 也就是宏任务执行前，必须保证微任务队列是空的
+  * 如果不为空，那么久优先执行微任务队列中的任务（回调）
+
+## 15.5.面试题
+
+**Promise面试题**
+
+```javascript
+
+console.log("script start");
+
+setTimeout(() => {
+    console.log("setTimeout1");
+    new Promise(function (resolve) {
+        resolve();
+    }).then(function () {
+        console.log("then4");
+    });
+    console.log("then2");
+});
+
+new Promise(function (resolve) {
+    console.log("promise1");
+    resolve();
+}).then(function () {
+    console.log("then1");
+});
+
+setTimeout(() => {
+    console.log("setTimeout2");
+});
+
+console.log(2);
+
+queueMicrotask(() => {
+    console.log("queueMicrotask1");
+});
+
+new Promise(function (resolve) {
+    resolve();
+}).then(function () {
+    console.log("then3");
+});
+
+console.log("script end");
+
+// script start
+// promise1
+// 2
+// script end
+// then1
+// queueMicrotask1
+// then3
+// setTimeout1
+// then2
+// then4
+// setTimeout2
+
+/* 解析
+        1. main script代码执行
+        2. 打印script start
+        3. 遇到第一个setTimeout，将其放入宏任务队列
+        4. 遇到第一个new Promise 打印promise1，resolve()时 将then回调放入微任务队列
+        5. 遇到第二个setTimeout， 将其放入宏任务队列
+        5. 打印2
+        6. 遇到queueMicrotask，将回调放入微任务队列
+        7. 遇到第二个new Promise，resolve()时 将then回调放入微任务队列
+        8. 打印script end
+        9. 当前调用栈的代码执行完毕，去任务队列中找，根据浏览器在执行宏任务队列之前，会先清空微任务队列的机制，（队列是先进先出的数据结构）
+        10. 依次打印 then4  queueMicrotask1  then3
+        11. 执行宏任务的第一个回调 打印setTimeout1
+        12. 遇到一个new Promise resolve()时 将then的回调放入微任务队列
+        13. 打印then2
+        14. 当前宏任务执行完毕，执行下一个宏任务，监测微任务队列是否有任务
+        15. 打印then4（刚刚推入微任务的回调）
+        16. 执行宏任务队列的任务  打印setTimeout2
+      */
+```
+
+**async、await面试题**
+
+* async函数如果没有返回值，``默认返回undefined``
+  * 相当于Promise.resolve(undefined)
+* await 后面通常跟一个返回值是Promise的表达式，await会``等到Promise的状态是fulfilled``时，才``执行后续代码``
+* 如果Promise的状态是fulfilled，那么Promis``后面的代码相当于被包裹在then函数中``，所以后续代码会被放入``到微任务队列中``
+
+```javascript
+async function async1() {
+    console.log("async1 start");
+    await async2();
+    console.log("async end");
+}
+
+async function async2() {
+    console.log("async2");
+}
+
+console.log("script start");
+
+setTimeout(() => {
+    console.log("setTimeput");
+}, 0);
+
+async1();
+
+new Promise((resolve) => {
+    console.log("promise1");
+    resolve();
+}).then(() => {
+    console.log("promise2");
+});
+
+console.log("script end");
+
+// script start
+// async1 start
+// async2
+// promise1
+// script end
+// async end
+// promise2
+// setTimeput
+/*
+        1. main script执行
+        2. 打印script start
+        3. 执行setTimeout，将其给执行异步操作的线程，当时间结束后，异步操作的线程将其放入宏任务队列
+        4. 执行async1()
+        5. 打印async1 start
+        6. 执行 await async2()
+        7. 打印 async2
+        8. async2函数返回值相当于 Promise.resolve(undefined)
+        9. async1中的await等到了fulfilled状态，将其后续代码加入到微任务中
+        10. 执行new Promise 打印promise1
+        11. 执行resolve（） 将then代码推入微任务队列
+        12. 打印script end
+        13. 执行微任务队列代码 依次打印async end  promise2
+        14. 执行宏任务队列任务， 打印setTimeput
+      */
+```
+
+# 16.错误处理方案
+
+## 16.1.抛出异常
+
+* 通过throw关键字，抛出一个异常
+* throw语句用于``抛出一个用户自定义的异常``
+* 当遇到throw语句时，``当前函数执行会被停止``（throw后面的语句不会被执行）
+
+### throw
+
+* throw后面可以跟上``一个表达式来表示具体的异常信息``
+* throw后面可以**跟的类型**
+  * ``基本数据类型``： 比如number、string、boolean
+  * ``对象类型``
+
+### Error类
+
+* JavaScript提供了一个Error类
+* Error包含三个属性
+  * ``message``： 创建Error对象时传入的message
+  * ``name``：Error的名称，通常和类的名称一致
+  * ``stack``：整个Error的错误信息，包括函数的调用栈，当我们直接打印Error对象时，打印的就是stack
+* Error有一些自己的子类
+  * RangeError：下标值越界时使用的错误类型
+  * SyntaxError：解析语法错误时使用的错误类型
+  * TypeError：出现类型错误时，使用的错误类型
+
+
+
+```javascript
+function foo() {
+    // throw new RangeError("我是错误信息", "ss");
+    // throw new TypeError("我是错误信息", "ss");
+    throw new SyntaxError("我是错误信息", "ss");
+}
+
+foo();
+```
+
+## 16.2.异常的捕获
+
+* 当程序``出现异常``，这个异常会``一层一层往上抛``
+
+* 如果整个程序``没有捕获异常``，那么就会抛``给浏览器``，浏览器拿到异常会``在控制台报错，后续代码就不会执行``
+
+* 所以我们应该手动捕获异常
+
+* 使用try  catch来捕获异常
+
+* catch后面可以跟finally
+
+* es10中catch后面绑定的error可以省略
+
+  * ```javascript
+    try{
+        
+    }catch{
+        //不用error的信息，可以省略
+    }finally {
+         console.log("无论是否异常都会执行");
+    }
+    ```
+
+  * 
+
+```javascript
+function foo() {
+    // throw new RangeError("我是错误信息", "ss");
+    // throw new TypeError("我是错误信息", "ss");
+    throw new SyntaxError("我是错误信息", "ss");
+}
+try {
+    foo();
+} catch (error) {
+    console.log(error.name); //SyntaxError
+    console.log(error.message); // 我是错误信息
+    console.log(error.stack);
+    // SyntaxError: 我是错误信息
+    // at foo (异常处理.html:14:15)
+    // at 异常处理.html:17:9
+}
+```
+
+# 17.WebStorage
+
+## 17.1.认识Storage
+
+* **``localStorage：本地存储``**，提供的是一种``永久性的存储方法``，在关掉网页重新打开时，存储内容依然保留
+* **``sessionStorage：会话存储``**，提供``本次会话的存储``，在关掉会话（网页）时，存储的内容会被清除
+
+## 17.2.两者区别
+
+* 关闭网页重新打开，localStorage保存，sessionStorage不保存
+* 在``同一页面内实现跳转``，localStorage和sessionStorage``都会被保存``
+* ``跳转到不同的网页时``(打开一个新的页面)，localStorage保存，sessionStorage不保存
+
+## 17.3.Storage的常见属性
+
+* length
+  * 只读属性，返回Storage中对象的个数
+* setItem、getItem
+* key(index)
+  * 返回储存在第index的key名称
+* removeItem
+* clear
+
+```javascript
+localStorage.key(0)
+sessionStorage.key(0)
+```
+
+# 18.正则表达式
+
+**定义**
+
+* 正则表达式（Regular Expression。简写为regex、regexp、RE）
+
+* 则这表达式使用单个字符串来描述、匹配一系列匹配某个句法规则的字符串
+* **简单来说：正则表达式是一种字符串匹配利器，可以帮助我们搜索、获取、替代字符串**
+
+**使用**
+
+* JavaScript中，正则表达式使用``RegExp类``来创建，也有对应的字面量方式
+
+* 正则表达式主要由两部分构成：模式（patterns）和修饰符（flags）
+
+* ```javascript
+  const reg = new RegExp('aa','ig')
+  const reg1 = /aa/i
+  ```
+
+* 
+
+**RegExp实例方法**
+
+* test(str)
+  * 执行一个检索，用来查看正则表达式与指定的字符串是否匹配。返回 `true` 或 `false`。
+* exec(str)
+  * 在一个指定字符串中执行一个搜索匹配。返回一个结果数组或 [`null`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Operators/null)。
+
+**字符串中的方法(可以使用正则)(部分方法)**
+
+* match
+  * 检索返回一个字符串匹配正则表达式的结果。
+* matchAll
+  * matchAll的正则必须全局匹配，``加g``
+  * 返回一个包含所有匹配正则表达式的结果及分组捕获组的迭代器。
+* replace
+* replaceAll
+* split
+* search
+
+**常见的修饰符**
+
+* g
+  * 全部的，匹配全部的（global）
+* i
+  * 忽略大小写（ignore）
+* m
+  * 多行匹配（multiple）
+
+## 18.1.RegExp中的规则
+
+### 18.1.1 字符类
+
+**字符类（character classes）是一个``特殊的符号``，匹配特定集中的任何符号**
+
+``下面每个符号只能匹配一个``
+
+* **\d**   （digit）
+  * 表示0~9的数字
+* **\s**   （space）
+  * 表示空格符号，包括（制表符\t、换行符\n和其他稀少的字符）
+* **\w**  （word）
+  * 表示拉丁字母、数字、下划线
+* **.**
+  * 表示除换行符之外的任何字符
+
+**反向类（inverse classes）**
+
+* **\D** 
+  * 表示非数字，除\d以外的任何字符
+* **\S** 
+  * 表示非空格，除\s之外的任何字符
+* **\W**
+  * 表示非单位字符，除\w之外的任何字符
+
+### 18.1.2锚点
+
+**符号^和符号$在正则中具有特殊意义，称之为锚点**
+
+* ``^``  表示匹配开头
+* ``$``  表示匹配结尾
+
+**词边界**
+
+* 词边界\b是一种检查，像^和$一样，他会检查字符串中的位置E是否是词边界
+* 词边界测试\b检查位置的一侧是否匹配\w，而另一侧则不匹配\w
+
+```javascript
+//  表示匹配紧挨着name左边的不可以是\w相关的(字母、数字、下划线)这之外其他的都行，
+//右边则可以是任意
+// 还可以这样 
+/\bname\b/  // 表示name两侧紧挨着的不能是\w相关的
+
+const str = "my 我namea is zs";
+if (/\bname/gi.test(str)) {
+    console.log("first");  
+}
+// first
+
+//案列  取出时间
+const info = `time 12:00 eat some food 234:88`;
+const timeRe = /\b\d\d:\d\d\b/g;
+console.log(info.match(timeRe));// [12:00]
+```
+
+### 18.1.3.集合和范围
+
+**集合**
+
+* 使用``[]``
+* 比如说，[eao]意味着在这三个字符e、a、o中任意一个都行
+
+**范围**
+
+* 方括号也可以包含字符范围
+* 比如说[a-z]会匹配从a到z范围内的字母
+* \d 等同于[0-9]
+* \w 等同于[a-zA-Z0-9_]
+
+**排除范围**
+
+* 中括号内开头添加^
+
+* [^0-9] 表示排除0-9
+
+### 18.1.4.量词（quantifiers）
+
+* 用来形容我们所需要的数量的词称为量词
+* 数量{n}
+* 确切的位数：{5}
+* 某个范围的位数： {3，5}
+* 某个数字到任意： {2，}
+
+```javascript
+/a{3,5}/
+// 表示匹配3到5直接数量的a
+```
+
+**量词的缩写**
+
+* +
+  * 表示一个或多个，同{1,}
+* *
+  * 表示0个或多个，同{0,}
+* ?
+  * 表示0个或1个，同{0,1}
+
+### 18.1.5.贪婪模式和惰性模式
+
+* 默认情况下的匹配规则是查找到匹配的内容后，会继续向后查找，一直找到最后一个匹配的内容
+  * 这种匹配模式，称之为``贪婪模式（Greedy）``
+* ``懒惰模式``中的量词与贪婪模式中是相反的
+  * 只要获取对应的内容后，就不再继续向后匹配
+  * 可以在量词后面加一个？来启用
+  * 所以匹配模式应变成**+?**   ***?**  **??**
+
+* 默认情况下匹配规则是查找到匹配内容后，会继续向后查找，一直找到最后一个匹配的内容
+  * 这种匹配方式，称之为``贪婪模式（Greedy）``
+* 懒惰模式中的量词与贪婪模式中的是相反的
+  * 
+
+```javascript
+// 获取书名
+const message = "我最喜欢的一本书是《肖申克的救赎》和《小猪佩奇》";
+//默认情况 .+ 是贪婪模式
+// 获取的结果就是["《肖申克的救赎》和《小猪佩奇》"]
+// 因为 》也是 .能够匹配到的
+// const bookRe = /《.+》/g;
+
+// 在后面加?表示开启惰性模式
+// 表示找到一个符合的就将结果储存，然后继续后续查找
+const bookRe = /《.+?》/g;
+console.log(message.match(bookRe)); // ['《肖申克的救赎》', '《小猪佩奇》']
+```
+
+### 18.1.6.捕获组（capturing group）
+
+* 模式的一部分可以用括号括起来，这称为``捕获组``
+* 有两个作用
+  * 允许将匹配的一部分作为结果数组中的单独项
+  * 将括号视为一个整体
+
+```javascript
+      const message = "我最喜欢的一本书是《肖申克的救赎》和《小猪佩奇》";
+	// 匹配结果没有加g 也可用matchAll
+      const bookRe = /《(.+?)》/;
+      console.log(message.match(bookRe)); 
+      // 索引0 "《肖申克的救赎》"
+      // 索引1 "肖申克的救赎"
+```
+
+**命名组**
+
+* 给捕获组添加名称（用数字记录组很困难），这样使用类似match和matchAll中就可以在group中获取了
+* 在括号开始的位置放置?\<name>
+
+```javascript
+const reg = /(?<hhh>hel)lo/i
+```
+
+# 19.防抖和节流
+
+* JavaScript是事件驱动的，大量的操作会出发事件，加入到事件队列中处理
+* 对于某些频繁的事件处理会造成性能的损耗，就可以通过防抖和节流来限制事件的频繁发生
+* **防抖和节流都是函数**
+
+## 19.1.防抖函数
 
