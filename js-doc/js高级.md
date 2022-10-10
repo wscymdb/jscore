@@ -2036,7 +2036,7 @@ Promise.any([promise, promise1, promise2])
 
 # 11.Iterator(迭代器)
 
-* **在Javascript中，迭代器也是哟个具体的对象，这个对象需要符合迭代器协议**（iterator protocol）
+* **在Javascript中，迭代器也是一个具体的对象，这个对象需要符合迭代器协议**（iterator protocol）
   * 迭代器协议定义了``产生一系列值（无论是有限还是无线个）的标准方式``
   * 在JavaScript中这个标准就是一个``特点的next方法``
 
@@ -2984,4 +2984,430 @@ const reg = /(?<hhh>hel)lo/i
 * **防抖和节流都是函数**
 
 ## 19.1.防抖函数
+
+* 有一个输入框，监听这个输入框的input事件
+* 用户想搜索macbook，但是只要一输入就会发送网络请求，这显然是消耗内存的
+* 那么就可以用防抖来解决
+  * 当用户输入的时候如果连续输入就不发送请求，
+  * 如果间隔（比如说间隔200ms）内没有输入，那么就发送一次请求
+
+```javascript
+// 基本实现 -取消防抖、是否立即执行
+function ymDebounce(cb, delay, immediate = false) {
+    // 创建变量
+    let timer = null;
+    let isInvoke = false;
+    // 返回一个函数用来作为oninput的事件
+    const _debounce = function (...args) {
+        // 判断是否立即执行
+        if (immediate && !isInvoke) {
+            cb.apply(this, args);
+            isInvoke = true;
+            return;
+        }
+        // 如果timer不是空 那么就清空计时器
+        // 如果delay时间内再次调用此函数那么上一次的计时器就会被清空
+        // 这就是防抖的核心代码
+        if (timer) clearTimeout(timer);
+        // 创建一个计时器
+        timer = setTimeout(() => {
+            cb.apply(this, args);
+            // 执行过后 将此次的计时器改为null
+            // 不写也行，写了更加严谨，让一起回归原本
+            timer = null;
+            isInvoke = false;
+        }, delay);
+    };
+    // 取消防抖
+    _debounce.cancel = function () {
+        if (timer) clearTimeout(timer);
+        timer = null;
+        isInvoke = false;
+    };
+    return _debounce;
+}
+
+// 有返回值
+function ymDebounce(cb, delay, immediate = false) {
+    // 创建变量
+    let timer = null;
+    let isInvoke = false;
+    let res = undefined;
+    // 返回一个函数用来作为oninput的事件
+    const _debounce = function (...args) {
+        return new Promise((resolve, reject) => {
+            try {
+                // 判断是否立即执行
+                if (immediate && !isInvoke) {
+                    res = cb.apply(this, args);
+                    resolve(res);
+                    isInvoke = true;
+                    return;
+                }
+
+                if (timer) clearTimeout(timer);
+                // 创建一个计时器
+                timer = setTimeout(() => {
+                    res = cb.apply(this, args);
+                    resolve(res);
+                    timer = null;
+                    isInvoke = false;
+                }, delay);
+            } catch (error) {
+                reject(error);
+            }
+        });
+    };
+    // 取消防抖
+    _debounce.cancel = function () {
+        if (timer) clearTimeout(timer);
+        timer = null;
+        isInvoke = false;
+    };
+    return _debounce;
+}
+const debounce = ymDebounce(
+    (...args) => {
+        console.log(args);
+        return "eres";
+    },
+    1000,
+    false
+);
+debounce("jack", 19, 1.88).then((res) => {
+    console.log(res);
+});
+```
+
+## 19.2.节流函数
+
+* 单位时间内，按照固定的频率触发事件
+* 比如有一个输入框，监听input事件
+  * 如果1秒输入10次，那么就会调用10次请求
+  * 现在想1秒内无论输入多少次只发一次请求，这就是节流
+
+```javascript
+function ymThrottle(cb, interval, leading = true, trailing = false) {
+    // startTime不用Date.now()，用0
+    // 因为节流函数默认情况第一次是要触发的
+    // 用0的话第一次触发awaitTime一定是<=0
+    let startTime = 0;
+    const _throttle = function (...args) {
+        const nowTime = Date.now();
+        // 判断是否立即执行
+        // 让awaitTime 大于0即可
+        if (!leading && startTime === 0) {
+            startTime = nowTime;
+        }
+        // 这一行代码是核心代码
+        // nowTime - startTime 表示代码执行开始到执行中任意时间的间隔
+        // interval - (nowTime - startTime) 表示用户传入的时间间隔减去执行的时间间隔
+        // 如果这个差值小于等于0的话就执行函数
+        const awaitTime = interval - (nowTime - startTime);
+        //
+        if (awaitTime <= 0) {
+            cb.apply(this, args);
+            // 将开始时间重新赋值，目的是计算下次的时间间隔
+            startTime = Date.now();
+        }
+    };
+    return _throttle;
+}
+
+// 实现尾部控制相关-取消和返回值
+function ymThrottle(
+cb,
+ interval,
+ { leading = true, traling = false } = {}
+) {
+    let startTime = 0;
+    let timer = null;
+    const _throttle = function (...args) {
+        return new Promise((resolve, reject) => {
+            try {
+                const nowTime = Date.now();
+
+                if (!leading && startTime === 0) {
+                    startTime = nowTime;
+                }
+
+                const waitTime = interval - (nowTime - startTime);
+
+                if (waitTime <= 0) {
+                    console.log("first");
+                    if (timer) clearTimeout(timer);
+                    const res = cb.apply(this, args);
+                    resolve(res);
+                    startTime = nowTime;
+                    timer = null;
+                    return;
+                }
+                // 实现尾部取消
+                // 在间隔点之后添加一个定时器
+                // 如果是间隔点那么就会取消这个定时器
+                if (traling && !timer) {
+                    timer = setTimeout(() => {
+                        console.log("timer");
+                        const res = cb.apply(this, args);
+                        resolve(res);
+                        startTime = Date.now();
+                        timer = null;
+                    }, waitTime);
+                }
+            } catch (error) {
+                reject(error);
+            }
+        });
+    };
+    // 取消
+    _throttle.cancel = function () {
+        if (timer) clearTimeout(timer);
+    };
+    return _throttle;
+}
+```
+
+# 20.深拷贝&&事件总线
+
+## 20.1.深拷贝
+
+```javascript
+// 要用weakMap 用完后没有对newObj进行强引用，newObj会被垃圾回收
+
+function deepCopy(originValue, map = new WeakMap()) {
+    // 如果是symbol类型
+    if (typeof originValue === "symbol")
+        return Symbol(originValue.description);
+
+    // 判断传入的是否是非对象
+    if (!isObject(originValue)) return originValue;
+
+    // 函数一般不会深拷贝，函数是用来执行的，深拷贝会造成占用内存
+    if (originValue instanceof Function) return originValue;
+
+    // 如果是set类型
+    if (originValue instanceof Set) {
+        const set = new Set();
+        for (const item of originValue) {
+            set.add(deepCopy(item));
+        }
+        return set;
+    }
+
+    // 循环引用
+    if (map.get(originValue)) return map.get(originValue);
+
+    // 判断是对象还是数组
+    const newObj = Array.isArray(originValue) ? [] : {};
+
+    // 循环引用
+    map.set(originValue, newObj);
+
+    for (const key in originValue) {
+        newObj[key] = deepCopy(originValue[key], map);
+    }
+    // 如果key是symbol
+    const symbolKeys = Object.getOwnPropertySymbols(originValue);
+    for (const symbolKey of symbolKeys) {
+        newObj[Symbol(symbolKey.description)] = deepCopy(
+            originValue[symbolKey],
+            map
+        );
+    }
+    return newObj;
+}
+
+const s1 = Symbol("我是s1");
+const info = {
+    name: "zs",
+    age: 19,
+    address: {
+        province: "HENAN",
+        city: "信阳",
+    },
+    color: ["red", "blue", "green"],
+};
+// 循环引用
+info.self = info;
+
+const newInfo = deepCopy(info);
+console.log(newInfo);
+```
+
+## 20.1.事件总线
+
+```javascript
+class ymEventBus {
+    constructor() {
+        this.eventMap = {}
+    }
+
+    // 监听
+    on(eventName, eventFn) {
+        let eventFns = this.eventMap[eventName]
+
+        if (!eventFns) {
+            eventFns = []
+            this.eventMap[eventName] = eventFns
+        }
+
+        eventFns.push(eventFn)
+    }
+    // 发射
+    emit(eventName, ...args) {
+        let eventFns = this.eventMap[eventName]
+        if (!eventFns) return
+
+        eventFns.forEach((fn) => fn(...args))
+    }
+
+    // 取消
+    off(eventName, eventFn) {
+        let eventFns = this.eventMap[eventName]
+        if (!eventFns) return
+
+        this.eventMap[eventName] = eventFns.filter((fn) => fn !== eventFn)
+
+        if (!this.eventMap[eventName].length) {
+            delete this.eventMap[eventName]
+        }
+    }
+}
+
+const bus = new ymEventBus()
+
+const fn1 = (...args) => {
+    console.log('vabClick 01', args)
+}
+const fn2 = (...args) => {
+    console.log('vabClick 02', args)
+}
+bus.on('navClick', fn1)
+bus.on('navClick', fn2)
+
+const btnEl = document.querySelector('.nav-btn')
+btnEl.onclick = function () {
+    console.log('自己触发')
+    bus.emit('navClick', '男', 19, 1.88)
+    bus.off('navClick', fn1)
+    console.log(bus)
+}
+console.log(bus)
+```
+
+# 21.XHR和Fetch
+
+## 21.1.http相关
+
+### 21.1.1.http版本
+
+* **HTTP/0.9**
+  * 发布于1991年
+  * ``只支持GET``请求方法获取文本数据，当时主要是为了获取HTML页面内容
+* **HTTP/1.0**
+  * 发布于1996年
+  * 支持POST、HEAD等请求方法，支持请求头、响应头等、支持更多种数据类型（不再局限文本数据）
+  * 但是浏览器的``每次请求都需要与服务器建立一个TCP连接``，请求处理完成后立即断开TCP连接，每次建立连接``增加性能损耗``
+* **HTTP/1.1（目前使用最广泛的版本）**
+  * 发布于1997年
+  * 增加了PUT、DELETE等请求方法
+  * 采用``持久连接(Connection：keep-alive)``，多个请求可以共用一个TCP连接
+* **HTTP/2.0**
+  * 2015年发布
+* **HTTP/3.0**
+  * 2018年发布
+
+### 21.1.2.Request Header
+
+* **content-length**
+  * 我呢见打大小长度
+* **keep-alive**
+  * http是基于TCP协议的，但是通常在进行一次请求和响应结束后会立刻中断
+  * http1.0中需要手动开启
+  * http1.1中默认开启
+* **accept-encoding**
+  * 请求文件时用到
+  * 告知服务器，客服端支持的文件压缩格式（浏览器自动配置）
+  * 这样服务的就可以返回对应的压缩格式文件，节省传输时间
+* **accept**
+  * 请求数据时用到
+  * 告知服务器，客户端可接受文件的格式类型
+
+### 21.1.3.response code
+
+* https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Status
+
+## 21.2.AJAX
+
+**XMLHttpRequest的state（状态）**
+
+| 值   | 状态             | 描述                                         |
+| ---- | ---------------- | -------------------------------------------- |
+| 0    | UNSENT           | 代理被创建，但尚未调用open()方法             |
+| 1    | OPENED           | open()方法已被调用                           |
+| 2    | HEADRES_RECEIVED | send()方法已被调用，并且头部和状态已经可获得 |
+| 3    | LOADING          | 下载中，responseText属性已经 包含部分数据    |
+| 4    | DONE             | 下载操作已完成                               |
+
+**XMLHttpRequest的事件**
+
+* **onreadyStatechange**
+  * 监听readyState的变化
+* **loadStart**
+  * 请求开始
+* **progress**
+  * 一个响应数据包到达，此时整个response body都在response中 
+* **abort**
+  * 调用xhr.abort()取消了请求
+* **error**
+  * 发生连接错误
+* **load**
+  * 请求成功完成
+* **timeout**
+  * 由于请求超时而取消了该请求（仅发生在设置了timeout的情况下）
+* **loadend**
+  * 在load，error，timeout或abort之后触发
+
+**获取HTTP的响应状态**
+
+```javascript
+xhr.status
+xhr.statusText
+```
+
+**timeout&&abort**
+
+* 在网络请求中，为了避免过长时间服务器无法返回数据，通常会为请求设置一个超时时间（timeout）
+  * 当达到超时时间后依然没有获取到数据，那么这个请求会自动被取消掉
+  * 默认值为0，表示没有设置超时时间
+* 也可以通过``abort``方法，强制取消请求
+
+## 21.3.Fetch
+
+* 使用fetch上传文件时候，``无法查看进度``
+
+* Fetch可以看作是``早期的XMLHttpRequest的替代方案``，他提供了一种更加现代的处理方案
+  * 比如返回值是一个Promise
+  * 比如不像XMLHttpRequest一样，所有的操作都在一个对象上
+
+### fetch使用
+
+* fetch函数是浏览器提供的一个全局函数，可以直接使用
+* fetch函数的返回值是Promise
+* 拿到返回值后，如果返回的值是``json``类型，那么就调用json()方法
+  * 这个返回值是一个 `Response`（类）对象
+  * https://developer.mozilla.org/zh-CN/docs/Web/API/Response/json
+  * 如果是其他的类型，就调用相应的方法
+* 
+
+```javascript
+fetch('http://180.76.235.241:3000/media/list', {
+    method: 'get',
+    headers: {},
+    body: {},
+}).then(async (resp) => {
+    const res = await resp.json()
+    console.log(res)
+})
+```
 
